@@ -1,7 +1,0 @@
-# 用 Cloudflare 隧道（面板托管）时，把面板给的「连接器 token」粘到
-# tunnel-token.txt（复制本文件改名，去掉 .example）。
-# 以 # 开头的都是注释，会被忽略；这个文件已被 .gitignore 忽略。
-#
-# 位置：Cloudflare 面板 → 网络 → 连接器 → Cloudflare 隧道 → 你的隧道 → 安装并运行连接器
-# 把命令里 --token 后面那一长串复制过来即可（形如 eyJhIj...）
-YOUR_TUNNEL_TOKEN
