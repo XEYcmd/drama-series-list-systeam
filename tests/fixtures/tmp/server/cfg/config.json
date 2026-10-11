@@ -1,0 +1,18 @@
+{
+  "bind": "0.0.0.0",
+  "port": 7878,
+  "owner_token": "4ouMY1yNf7OiMN_9zABz4WCGZzdgoF8t63TBI9h4RiQ",
+  "guest_token": "cuTxAj2TObEMm4M2SQDyV75pFMLo66YSD_6kmWSFVUc",
+  "public_read": false,
+  "lan_no_token": false,
+  "lan_cidrs": [
+    "127.0.0.1/32",
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ],
+  "data_file": "D:\\dsh的项目\\GitHub发布\\tests\\fixtures\\tmp\\server\\cfg\\作品库.json",
+  "static_file": "D:\\dsh的项目\\GitHub发布\\作品库.html",
+  "snapshot_keep": 10,
+  "max_body_bytes": 8388608
+}

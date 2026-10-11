@@ -1,0 +1,28 @@
+{
+  "kind": "worklib-db",
+  "version": 1,
+  "settings": {
+    "insertByRule": true
+  },
+  "works": [
+    {
+      "uuid": "xey0192f0d4-1a2b-7c3d-8e4f-5a6b7c8d9e0fcmd",
+      "name": "葬送的芙莉莲",
+      "aliases": [
+        "Frieren"
+      ],
+      "note": "",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "uuid": "xey0192f0d5-2b3c-7d4e-9f50-6b7c8d9e0f10cmd",
+      "name": "来自深渊",
+      "aliases": [],
+      "note": "",
+      "addedAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "discarded": [],
+  "revision": 2,
+  "updatedAt": "2026-10-10T23:04:12+08:00"
+}

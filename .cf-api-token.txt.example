@@ -1,0 +1,4 @@
+# 把 Cloudflare API 令牌粘到这里（复制本文件为 .cf-api-token.txt）
+# 权限只需要：区域 → DNS → 编辑；区域 → 区域 → 读取
+# 这个文件已被 .gitignore 忽略，绝不会被提交
+YOUR_CLOUDFLARE_API_TOKEN

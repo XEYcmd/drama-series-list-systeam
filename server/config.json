@@ -1,0 +1,11 @@
+{
+  "bind": "0.0.0.0",
+  "port": 7878,
+  "owner_token": "",
+  "guest_token": "",
+  "public_read": false,
+  "lan_no_token": false,
+  "data_file": "data/作品库.json",
+  "static_file": "作品库.html",
+  "quiet": false
+}
