@@ -1,0 +1,19 @@
+{
+  "bind": "0.0.0.0",
+  "port": 7878,
+  "owner_token": "9BJmhQEbKB3dwOmlciXzQUINVsJfq7bNkXj1NcxgBaY",
+  "guest_token": "Uo3vhJ4nM-qt61Hz5KA4ACCV115Ev04Lx7BEliypPOo",
+  "public_read": false,
+  "lan_no_token": false,
+  "lan_cidrs": [
+    "127.0.0.1/32",
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ],
+  "data_file": "data/作品库.json",
+  "static_file": "作品库.html",
+  "snapshot_keep": 10,
+  "max_body_bytes": 8388608,
+  "quiet": false
+}

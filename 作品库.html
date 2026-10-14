@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>作品库 · 作品-UUID 管理</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --line: #e3e6ec;
+    --text: #1d2129;
+    --muted: #86909c;
+    --accent: #2b6cf6;
+    --ok: #12a150;
+    --warn: #d97706;
+    --err: #d92d20;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px;
+    background: var(--bg); color: var(--text);
+    font: 14px/1.6 "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  .head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; margin-top: 16px;
+  }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    font: inherit; padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--line); background: #fff; color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { border-color: #c9ced8; background: #fafbfc; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #1f5ee0; }
+  button.danger { color: var(--err); }
+  button.mini { padding: 3px 9px; font-size: 13px; border-radius: 6px; }
+  input[type=text] {
+    font: inherit; padding: 7px 10px; border-radius: 8px;
+    border: 1px solid var(--line); background: #fff; color: var(--text);
+  }
+  input[type=text]:focus { outline: 2px solid #cfe0ff; border-color: var(--accent); }
+  .addrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #inpName { flex: 1 1 260px; }
+  #inpAlias { flex: 1 1 220px; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .opt { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--muted); font-size: 13px; }
+  .opt input { margin: 0; }
+  .tag {
+    display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px;
+    font-size: 12px; line-height: 18px; background: #eef1f6; color: #5c6b80; vertical-align: 1px;
+  }
+  .tag.other { background: #eaf3ff; color: #2b6cf6; }
+  #toast { margin-top: 12px; min-height: 22px; font-size: 14px; }
+  #toast.ok { color: var(--ok); }
+  #toast.warn { color: var(--warn); }
+  #toast.err { color: var(--err); }
+  #banner {
+    display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+    background: #fff8e6; border: 1px solid #ffe1a6; color: #7a5200; font-size: 13px;
+    white-space: pre-wrap;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  td.seq { width: 56px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  td.ops { width: 150px; white-space: nowrap; }
+  td.alias { color: var(--muted); font-size: 13px; }
+  .empty { color: var(--muted); padding: 20px 0; text-align: center; }
+  .name { word-break: break-word; }
+  .searchbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .searchbar .spacer { flex: 1; }
+  #inpSearch { width: 240px; }
+  .uuidline { margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .uuidline code {
+    font: 12px/1.5 Consolas, "Cascadia Mono", monospace;
+    background: #f2f4f8; border: 1px solid var(--line); border-radius: 5px;
+    padding: 2px 7px; word-break: break-all; user-select: all;
+  }
+  tr.revealed td { background: #fbfcff; }
+
+  /* ---- 标签（分类） ---- */
+  .tagbar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 999px; font-size: 12px; line-height: 18px;
+    background: #eef1f6; color: #5c6b80; border: 1px solid transparent;
+  }
+  button.chip { cursor: pointer; }
+  button.chip:hover { border-color: #c9ced8; background: #f7f9fc; }
+  button.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip .n { opacity: .7; font-size: 11px; }
+  td.tags { font-size: 12px; }
+  td.tags .chip { margin: 1px 3px 1px 0; }
+  .tagpool { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  #dlgTagPicked .chip { background: #eaf3ff; color: #2b6cf6; }
+  #inpNewTag { flex: 1 1 200px; }
+  dialog {
+    width: min(560px, calc(100vw - 32px)); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px; color: var(--text); background: #fff;
+  }
+  dialog::backdrop { background: rgba(20, 24, 32, .35); }
+  dialog h2 { margin: 0 0 8px; font-size: 16px; }
+  .dtext { margin: 6px 0; }
+  .dnote { color: var(--muted); font-size: 13px; }
+  #dlgCands { margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  #dlgCands label {
+    display: flex; gap: 10px; align-items: baseline; padding: 9px 12px;
+    border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  #dlgCands label:last-child { border-bottom: 0; }
+  #dlgCands label:hover { background: #fafbfc; }
+  #dlgCands .cand-name { flex: 1; }
+  #dlgCands .cand-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .dbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 14px; }
+
+  /* ---- 服务器模式 / 只读模式 ---- */
+  body.readonly .write-only { display: none !important; }
+  #roleBadge {
+    display: inline-block; padding: 1px 8px; border-radius: 999px; vertical-align: 2px;
+    font-size: 12px; line-height: 18px; background: #eef1f6; color: #5c6b80;
+  }
+  #roleBadge.server { background: #eaf3ff; color: #2b6cf6; }
+  #roleBadge.readonly { background: #fff3e0; color: #b45309; }
+  #issueBox {
+    display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+    background: #fef3f2; border: 1px solid #fecdca; color: #912018; font-size: 13px;
+  }
+  #issueBox .issue-actions { margin-top: 8px; }
+  #loginCard .loginrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #inpToken { flex: 1 1 320px; font-family: Consolas, "Cascadia Mono", monospace; }
+  .roNote {
+    margin-top: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px;
+    background: #fff8e6; border: 1px solid #ffe1a6; color: #7a5200;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>作品库</h1>
+    <span id="roleBadge">载入中…</span>
+    <div class="meta">
+      <span id="stat">共 0 部作品</span> ·
+      <span id="saveState">未改动</span>
+      <button class="mini" id="btnForgetToken" hidden>换口令</button>
+    </div>
+  </div>
+
+  <div class="card" id="loginCard" hidden>
+    <div class="loginrow">
+      <input type="password" id="inpToken" placeholder="访问口令" autocomplete="off">
+      <button class="primary" id="btnLogin">进入</button>
+    </div>
+    <div class="hint" id="loginHint">这个库需要口令。owner 口令可以编辑，guest 口令只能看。</div>
+  </div>
+
+  <div class="card">
+    <div class="addrow write-only">
+      <input type="text" id="inpName" placeholder="输入作品名（带不带《》都可以）" autocomplete="off">
+      <input type="text" id="inpAlias" placeholder="别名 / 其他译名，多个用 / 分隔（可选）" autocomplete="off">
+      <input type="text" id="inpTags" placeholder="标签，多个用 / 分隔（可选）" autocomplete="off">
+      <button class="primary" id="btnAdd">添加</button>
+    </div>
+    <div class="hint write-only">新作品会自动分配 <code>xey…cmd</code> 格式的 UUID（前缀 xey + UUID&nbsp;v7 + 后缀 cmd），与作品永久绑定，常规列表不显示 —— 想看某一条就点它那行的「显示UUID」（可复制），或导出「作品-UUID 对应表」。</div>
+    <div class="toolbar">
+      <button id="btnResort" class="write-only">按规则重排</button>
+      <button id="btnPreviewList">显示完整作品列表</button>
+      <button id="btnExportList">导出作品列表 CSV</button>
+      <button id="btnExportUuid" class="write-only">导出作品-UUID 对应表 CSV</button>
+      <button id="btnExportJson" class="write-only">导出备份 JSON</button>
+      <button id="btnImportJson" class="write-only">导入备份 JSON</button>
+      <input type="file" id="fileImport" accept=".json,application/json" hidden>
+    </div>
+    <label class="opt write-only"><input type="checkbox" id="chkInsertByRule" checked>
+      新增时按规则插到位（关掉则一律追加到末尾，之后再手动点「按规则重排」）</label>
+    <div class="roNote" id="roNote" hidden>只读模式（朋友访问）：可以搜索、查看和导出作品列表，不能修改。</div>
+    <div id="banner"></div>
+    <div id="issueBox">
+      <span id="issueText"></span>
+      <div class="issue-actions"><button class="mini" id="btnIssueAction">重试</button></div>
+    </div>
+    <div id="toast"></div>
+  </div>
+
+  <div class="card">
+    <div class="searchbar">
+      <div class="meta" id="listHead">列表</div>
+      <div class="spacer"></div>
+      <input type="text" id="inpSearch" placeholder="搜索作品名 / 别名 / UUID" autocomplete="off">
+      <button class="mini" id="btnClearSearch">清空</button>
+      <span class="meta" id="searchInfo"></span>
+    </div>
+    <div class="tagbar" id="tagBar"></div>
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>序号</th>
+          <th>作品名</th>
+          <th>别名</th>
+          <th>标签</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyHint">还没有作品，先在上面添加一条。</div>
+  </div>
+
+  <div class="card" id="previewWrap" hidden>
+    <div class="head">
+      <div class="meta" id="previewTitle">预览</div>
+      <div style="flex:1"></div>
+      <button class="mini" id="btnClosePreview">收起</button>
+    </div>
+    <div id="previewBody"></div>
+  </div>
+</div>
+
+<dialog id="dlgSimilar">
+  <h2>这个名字和已有的作品很像</h2>
+  <p class="dtext">你要添加的是 —— <b id="dlgInput"></b></p>
+  <div id="dlgCands"></div>
+  <p class="dtext dnote">「是同一作品」= 不新增，只提示重复；<br>
+     「登记为别名」= 把这次的写法记到那部作品名下，以后同样的写法直接判重复。</p>
+  <div class="dbtns">
+    <button class="primary" id="dlgSame">是同一作品</button>
+    <button id="dlgAlias">是同一作品，登记为别名</button>
+    <button id="dlgNew">是新作品，直接添加</button>
+    <button id="dlgCancel">取消</button>
+  </div>
+</dialog>
+
+<dialog id="dlgTags">
+  <h2>给《<span id="dlgTagsName"></span>》选标签</h2>
+  <p class="dtext">点一下切换选中；也可以自己在下面输入新标签（多个用 / 分隔）。</p>
+  <div id="dlgTagCands" class="tagpool"></div>
+  <div class="loginrow" style="margin-top:12px">
+    <input type="text" id="inpNewTag" placeholder="自定义标签，回车加入" autocomplete="off">
+    <button class="mini" id="btnAddTag">加入</button>
+  </div>
+  <p class="dtext"><b>已选：</b><span id="dlgTagPicked"></span></p>
+  <div class="dbtns">
+    <button class="primary" id="dlgTagSave">保存</button>
+    <button id="dlgTagCancel">取消</button>
+  </div>
+</dialog>
+
+<script id="core-logic">
+/* CORE-LOGIC-START
+   纯逻辑，不碰 DOM：可在 Node 中直接抽出本段做单元测试。
+   范围：UUID 生成、名称归一化、查重（含别名）、排序、相似提示。
+*/
+(function (root) {
+  'use strict';
+
+  var PREFIX = 'xey';
+  var SUFFIX = 'cmd';
+  // UUID 形状：8-4-4-4-12 十六进制；版本位用来判断是不是 v7
+  var UUID_SHAPE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+  function randomBytes(n) {
+    var out = new Uint8Array(n);
+    var c = (typeof globalThis !== 'undefined' && globalThis.crypto) || null;
+    if (c && typeof c.getRandomValues === 'function') {
+      c.getRandomValues(out);
+      return out;
+    }
+    for (var i = 0; i < n; i++) out[i] = Math.floor(Math.random() * 256);
+    return out;
+  }
+
+  // UUID v7：48 位毫秒时间戳 + 版本 7 + 变体 10 + 随机
+  function uuidv7() {
+    var ts = BigInt(Date.now());
+    var b = new Uint8Array(16);
+    b[0] = Number((ts >> 40n) & 0xffn);
+    b[1] = Number((ts >> 32n) & 0xffn);
+    b[2] = Number((ts >> 24n) & 0xffn);
+    b[3] = Number((ts >> 16n) & 0xffn);
+    b[4] = Number((ts >> 8n) & 0xffn);
+    b[5] = Number(ts & 0xffn);
+    b.set(randomBytes(10), 6);
+    b[6] = (b[6] & 0x0f) | 0x70; // version 7
+    b[8] = (b[8] & 0x3f) | 0x80; // variant RFC 4122
+    var hex = '';
+    for (var i = 0; i < 16; i++) hex += b[i].toString(16).padStart(2, '0');
+    return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) +
+           '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+  }
+
+  function makeWorkUuid() {
+    return PREFIX + uuidv7() + SUFFIX;
+  }
+
+  // 书名号等成对符号（比对与显示都要忽略）
+  var MARKS_RE = /[《》〈〉「」『』【】〔〕]/g;
+
+  // 显示用名称：只去掉书名号、首尾空白，并把连续空白压成一个空格。
+  // 不做全半角/大小写改写 —— 不擅自修改用户录入的名称。
+  function normalizeName(raw) {
+    var s = String(raw == null ? '' : raw);
+    s = s.replace(MARKS_RE, '');
+    s = s.replace(/\s+/g, ' ').trim();
+    return s;
+  }
+
+  // 比对用 key：不区分全半角、大小写、空白、标点，去掉成对符号。
+  // 用于判断「这两个名字是不是同一部作品」。
+  function compareKey(raw) {
+    var s = String(raw == null ? '' : raw);
+    try { s = s.normalize('NFKC'); } catch (e) { /* 老浏览器忽略 */ }
+    s = s.replace(/\p{P}|\p{S}|\s/gu, '');
+    return s.toLowerCase();
+  }
+
+  // 一条记录的「名字池」：正式名 + 所有别名
+  function namesOf(work) {
+    var out = [work.name];
+    var al = work.aliases || [];
+    for (var i = 0; i < al.length; i++) out.push(al[i]);
+    return out;
+  }
+
+  // 查重：拿输入去比每条记录的正式名和别名。
+  // 命中返回 { index, via: 'name'|'alias', text, work }，未命中返回 null。
+  function findDuplicate(works, raw) {
+    var key = compareKey(raw);
+    if (!key) return null;
+    for (var i = 0; i < works.length; i++) {
+      var w = works[i];
+      if (compareKey(w.name) === key) return { index: i, via: 'name', text: w.name, work: w };
+      var al = w.aliases || [];
+      for (var j = 0; j < al.length; j++) {
+        if (compareKey(al[j]) === key) return { index: i, via: 'alias', text: al[j], work: w };
+      }
+    }
+    return null;
+  }
+
+  function findDuplicateIndex(works, raw) {
+    var hit = findDuplicate(works, raw);
+    return hit ? hit.index : -1;
+  }
+
+  // 别名清理：去书名号/空白，去掉与本条正式名或其他别名重复的项
+  function cleanAliases(rawList, selfName) {
+    var selfKey = compareKey(selfName);
+    var seen = {};
+    var out = [];
+    for (var i = 0; i < rawList.length; i++) {
+      var s = normalizeName(rawList[i]);
+      var k = compareKey(s);
+      if (!k || k === selfKey || seen[k]) continue;
+      seen[k] = true;
+      out.push(s);
+    }
+    return out;
+  }
+
+  // 输入框里的别名串（用 / 、 , ; | 分隔）
+  function splitAliasInput(text) {
+    return String(text == null ? '' : text).split(/[\/、,，;；|]/);
+  }
+
+  /* ---------- 排序规则 ----------
+     1) 先排中文名，按拼音首字母正序；
+     2) 后排其他语言作品，按原名字母顺序。
+     判定：含汉字且不含假名 → 中文组；其余一律进「其他语言」组。
+     （纯汉字写的日文标题无法与中文区分，会按拼音排，需要时用别名/手动调整。）
+  */
+  var HAN_RE = /\p{Script=Han}/u;
+  var KANA_RE = /[\p{Script=Hiragana}\p{Script=Katakana}]/u;
+
+  function makeCollator(locale, opts) {
+    try { return new Intl.Collator(locale, opts); } catch (e) { return null; }
+  }
+  // zh 的默认排序就是拼音，即便引擎忽略 -u-co-pinyin 也能得到拼音序
+  var PINYIN_COLLATOR = makeCollator('zh-Hans-u-co-pinyin', { numeric: true });
+  var LATIN_COLLATOR = makeCollator('en', { numeric: true, sensitivity: 'base' });
+
+  function groupOf(raw) {
+    var s = normalizeName(raw);
+    if (!s) return 2;                       // 空名排最后
+    if (KANA_RE.test(s)) return 1;          // 有假名 → 日文，归其他语言
+    if (HAN_RE.test(s)) return 0;           // 纯汉字（含汉字+拉丁/数字）→ 中文组
+    return 1;                               // 其余 → 其他语言组
+  }
+
+  function collate(a, b, collator) {
+    if (collator) return collator.compare(a, b);
+    return a < b ? -1 : (a > b ? 1 : 0);
+  }
+
+  // 规则比较：<0 表示 a 应排在 b 之前
+  function compareByRule(aName, bName) {
+    var ga = groupOf(aName), gb = groupOf(bName);
+    if (ga !== gb) return ga - gb;
+    var na = normalizeName(aName), nb = normalizeName(bName);
+    var c = (ga === 0) ? collate(na, nb, PINYIN_COLLATOR) : collate(na, nb, LATIN_COLLATOR);
+    if (c !== 0) return c;
+    // 兜底：再按比对 key 排，保证顺序稳定可复现
+    var ka = compareKey(na), kb = compareKey(nb);
+    return ka < kb ? -1 : (ka > kb ? 1 : 0);
+  }
+
+  // 返回按规则排序后的新数组（不改动入参）
+  function sortWorksByRule(works) {
+    var idx = works.map(function (w, i) { return i; });
+    idx.sort(function (i, j) {
+      var c = compareByRule(works[i].name, works[j].name);
+      return c !== 0 ? c : i - j;           // 稳定排序
+    });
+    return idx.map(function (i) { return works[i]; });
+  }
+
+  // 新作品按规则应该插到的位置（不改动其他作品）
+  function insertionIndexByRule(works, newName) {
+    for (var i = 0; i < works.length; i++) {
+      if (compareByRule(newName, works[i].name) < 0) return i;
+    }
+    return works.length;
+  }
+
+  /* ---------- 相似提示（拼写错误时才用） ---------- */
+  // 编辑距离（基于 UTF-16 单元，中日英文都够用）
+  function levenshtein(a, b) {
+    if (a === b) return 0;
+    var la = a.length, lb = b.length;
+    if (!la) return lb;
+    if (!lb) return la;
+    var prev = new Array(lb + 1), cur = new Array(lb + 1), i, j;
+    for (j = 0; j <= lb; j++) prev[j] = j;
+    for (i = 1; i <= la; i++) {
+      cur[0] = i;
+      var ca = a.charCodeAt(i - 1);
+      for (j = 1; j <= lb; j++) {
+        var cost = ca === b.charCodeAt(j - 1) ? 0 : 1;
+        var best = prev[j] + 1;
+        if (cur[j - 1] + 1 < best) best = cur[j - 1] + 1;
+        if (prev[j - 1] + cost < best) best = prev[j - 1] + cost;
+        cur[j] = best;
+      }
+      var t = prev; prev = cur; cur = t;
+    }
+    return prev[lb];
+  }
+
+  var SIMILAR_THRESHOLD = 0.65;   // 低于这个相似度不提示
+  var SIMILAR_MIN_LEN = 3;        // 太短的名字不做猜测，避免噪音
+  var SIMILAR_MAX = 5;
+
+  function similarity(a, b) {
+    var la = a.length, lb = b.length;
+    var max = Math.max(la, lb);
+    if (!max) return 1;
+    var s = 1 - levenshtein(a, b) / max;
+    // 包含关系（少写了副标题/前缀）给一个加成
+    if (Math.min(la, lb) / max >= 0.5 && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0)) {
+      if (s < 0.85) s = 0.85;
+    }
+    return s;
+  }
+
+  // 返回相似候选 [{ index, via, text, score }]，按相似度从高到低
+  function findSimilar(works, raw) {    var key = compareKey(raw);
+    if (key.length < SIMILAR_MIN_LEN) return [];
+    var best = {};
+    for (var i = 0; i < works.length; i++) {
+      var pool = namesOf(works[i]);
+      for (var j = 0; j < pool.length; j++) {
+        var k = compareKey(pool[j]);
+        if (!k || k === key) continue;
+        var s = similarity(key, k);
+        if (s < SIMILAR_THRESHOLD) continue;
+        if (!best[i] || s > best[i].score) {
+          best[i] = { index: i, via: j === 0 ? 'name' : 'alias', text: pool[j], score: s };
+        }
+      }
+    }
+    return Object.keys(best).map(function (k2) { return best[k2]; })
+      .sort(function (x, y) { return y.score - x.score || x.index - y.index; })
+      .slice(0, SIMILAR_MAX);
+  }
+
+  /* ---------- 库上的写操作（纯函数：界面与测试共用同一套逻辑） ---------- */
+  function aliasConflictsIn(db, aliases, selfIndex) {
+    var out = [];
+    for (var i = 0; i < aliases.length; i++) {
+      var hit = findDuplicate(db.works, aliases[i]);
+      if (hit && hit.index !== selfIndex) out.push({ alias: aliases[i], hit: hit });
+    }
+    return out;
+  }
+
+  function dropAliasConflicts(aliases, conflicts) {
+    var bad = {};
+    for (var i = 0; i < conflicts.length; i++) bad[compareKey(conflicts[i].alias)] = true;
+    return aliases.filter(function (a) { return !bad[compareKey(a)]; });
+  }
+
+  function insertWork(db, name, aliases, uuid, tags) {
+    var byRule = !(db.settings && db.settings.insertByRule === false);
+    var at = byRule ? insertionIndexByRule(db.works, name) : db.works.length;
+    db.works.splice(at, 0, {
+      uuid: uuid || makeWorkUuid(),
+      name: name,
+      aliases: (aliases || []).slice(),
+      tags: cleanTags(tags || []),
+      note: '',
+      addedAt: new Date().toISOString()
+    });
+    return at;
+  }
+
+  // 第一步：判断能不能直接加。需要用户裁决相似候选时返回 need-similar，
+  // 由界面弹窗后再调 resolveSimilar（同步两步，界面与测试走同一条路径）。
+  // decisions.tags：可选的标签（字符串或数组），会跟着新作品一起写入。
+  function prepareAdd(db, rawName, rawAliasText, decisions) {
+    decisions = decisions || {};
+    var name = normalizeName(rawName);
+    if (!name) return { status: 'empty', name: '' };
+
+    var dup = findDuplicate(db.works, name);
+    if (dup) {
+      return { status: 'duplicate', index: dup.index, via: dup.via, text: dup.text, name: name };
+    }
+
+    var aliases = cleanAliases(splitAliasInput(rawAliasText), name);
+    var conflicts = aliasConflictsIn(db, aliases, -1);
+    if (conflicts.length) {
+      var keep = decisions.onAliasConflict ? decisions.onAliasConflict(conflicts, name) : false;
+      if (!keep) return { status: 'canceled', reason: 'alias-conflict', name: name, conflicts: conflicts };
+      aliases = dropAliasConflicts(aliases, conflicts);
+    }
+
+    var tags = cleanTags(splitTagInput(decisions.tags || []));
+    var cands = findSimilar(db.works, name);
+    if (cands.length) {
+      return { status: 'need-similar', name: name, aliases: aliases, tags: tags, candidates: cands };
+    }
+    return finishAdd(db, name, aliases, tags);
+  }
+
+  function finishAdd(db, name, aliases, tags) {
+    var at = insertWork(db, name, aliases, undefined, tags);
+    return { status: 'added', index: at, name: name, aliases: aliases,
+             tags: db.works[at].tags, uuid: db.works[at].uuid };
+  }
+
+  // 第二步：用户对相似候选的裁决
+  function resolveSimilar(db, pending, action, pick) {
+    if (action === 'cancel') {
+      return { status: 'canceled', reason: 'similar-cancel', name: pending.name, candidates: pending.candidates };
+    }
+    if (action !== 'same' && action !== 'alias') {
+      // 'new' 或未知动作 → 按新作品（带上前面填的标签）
+      return finishAdd(db, pending.name, pending.aliases, pending.tags);
+    }
+    var idx = (typeof pick === 'number' && pending.candidates[pick]) ? pick : 0;
+    var c = pending.candidates[idx];
+    var target = db.works[c.index];
+    if (!target) return finishAdd(db, pending.name, pending.aliases, pending.tags);
+    if (action === 'alias') {
+      var next = cleanAliases((target.aliases || []).concat([pending.name]), target.name);
+      if (next.length !== (target.aliases || []).length) {
+        target.aliases = next;
+        return { status: 'duplicate', index: c.index, via: 'name', text: target.name,
+                 name: pending.name, aliasAdded: true };
+      }
+    }
+    return { status: 'duplicate', index: c.index, via: 'name', text: target.name,
+             name: pending.name, aliasAdded: false };
+  }
+
+  // 改名：只改名字，UUID 与位置都不动
+  function renameWork(db, index, rawName) {
+    var w = db.works[index];
+    if (!w) return { status: 'canceled', reason: 'no-such-work' };
+    var name = normalizeName(rawName);
+    if (!name) return { status: 'empty', name: '' };
+    var dup = findDuplicate(db.works, name);
+    if (dup && dup.index !== index) {
+      return { status: 'duplicate', index: dup.index, via: dup.via, text: dup.text, name: name };
+    }
+    if (name === w.name) return { status: 'unchanged', name: name, index: index };
+    w.name = name;
+    return { status: 'renamed', index: index, name: name };
+  }
+
+  function setAliases(db, index, rawAliasText, decisions) {
+    decisions = decisions || {};
+    var w = db.works[index];
+    if (!w) return { status: 'canceled', reason: 'no-such-work' };
+    var aliases = cleanAliases(splitAliasInput(rawAliasText), w.name);
+    var conflicts = aliasConflictsIn(db, aliases, index);
+    if (conflicts.length) {
+      var keep = decisions.onAliasConflict ? decisions.onAliasConflict(conflicts, w.name) : false;
+      if (!keep) return { status: 'canceled', reason: 'alias-conflict', index: index, conflicts: conflicts };
+      aliases = dropAliasConflicts(aliases, conflicts);
+    }
+    w.aliases = aliases;
+    return { status: 'updated', index: index, aliases: aliases };
+  }
+
+  // 手动改 UUID：允许只写中间那截，前后缀自动补齐；唯一性与「不回流」照样管
+  function setUuid(db, index, raw) {
+    var w = db.works[index];
+    if (!w) return { status: 'canceled', reason: 'no-such-work' };
+    var s = String(raw == null ? '' : raw).trim();
+    if (!s) return { status: 'empty' };
+
+    var inner = s;
+    if (/^xey/i.test(inner)) inner = inner.slice(3);
+    if (/cmd$/i.test(inner)) inner = inner.slice(0, -3);
+    inner = inner.toLowerCase();
+    if (!UUID_SHAPE_RE.test(inner)) return { status: 'bad-format', input: s };
+    var full = PREFIX + inner + SUFFIX;
+
+    for (var i = 0; i < db.works.length; i++) {
+      if (i !== index && db.works[i].uuid === full) {
+        return { status: 'duplicate', index: i, uuid: full, name: db.works[i].name };
+      }
+    }
+    if (discardedUuidSet(db)[full]) return { status: 'discarded', uuid: full };
+    if (w.uuid === full) return { status: 'unchanged', uuid: full };
+
+    var old = w.uuid;
+    w.uuid = full;
+    var res = { status: 'updated', index: index, uuid: full, from: old, name: w.name };
+    if (inner.charAt(14) !== '7') res.warning = 'not-v7';   // 老数据可能是 v4，不拒绝但要说一声
+    return res;
+  }
+
+  // 删除：UUID 进「已舍弃」名单，不再回流
+  function deleteWork(db, index) {    if (index < 0 || index >= db.works.length) return null;
+    var w = db.works.splice(index, 1)[0];
+    db.discarded.push({ uuid: w.uuid, name: w.name, discardedAt: new Date().toISOString() });
+    return w;
+  }
+
+  function discardedUuidSet(db) {
+    var s = {};
+    var list = db.discarded || [];
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].uuid) s[list[i].uuid] = true;
+    return s;
+  }
+
+  // 合并导入：按 UUID 去重；同 UUID 的记录会用文件里的名字/别名/标签更新它
+  // （作品的 UUID 本身永远不会被改）；已舍弃的 UUID 不回流；保持文件里的顺序
+  function mergeImport(db, parsed) {
+    var out = { added: 0, updated: 0, skippedDup: 0, skippedDiscarded: 0, bad: 0 };
+    var gone = discardedUuidSet(db);
+    var pos = {};
+    for (var i = 0; i < db.works.length; i++) pos[db.works[i].uuid] = i;
+
+    var src = (parsed && Array.isArray(parsed.works)) ? parsed.works : [];
+    for (var j = 0; j < src.length; j++) {
+      var w = src[j];
+      if (!w || !w.uuid || !w.name) { out.bad++; continue; }
+      if (gone[w.uuid]) { out.skippedDiscarded++; continue; }
+
+      var name = normalizeName(w.name);
+      var aliases = cleanAliases(Array.isArray(w.aliases) ? w.aliases : [], name);
+      var tags = cleanTags(Array.isArray(w.tags) ? w.tags : (w.tags ? [w.tags] : []));
+
+      if (pos[w.uuid] !== undefined) {                 // 库里已有这条 → 按文件更新
+        var cur = db.works[pos[w.uuid]];
+        var changed = cur.name !== name ||
+          JSON.stringify(cur.aliases || []) !== JSON.stringify(aliases) ||
+          JSON.stringify(cur.tags || []) !== JSON.stringify(tags);
+        if (changed) {
+          cur.name = name;
+          cur.aliases = aliases;
+          cur.tags = tags;
+          out.updated++;
+        } else {
+          out.skippedDup++;
+        }
+        continue;
+      }
+      pos[w.uuid] = db.works.length;
+      db.works.push({
+        uuid: w.uuid,
+        name: name,
+        aliases: aliases,
+        tags: tags,
+        note: w.note || '',
+        addedAt: w.addedAt || new Date().toISOString()
+      });
+      out.added++;
+    }
+
+    if (parsed && Array.isArray(parsed.discarded)) {
+      for (var k = 0; k < parsed.discarded.length; k++) {
+        var d = parsed.discarded[k];
+        if (d && d.uuid && !gone[d.uuid]) { gone[d.uuid] = true; db.discarded.push(d); }
+      }
+    }
+    return out;
+  }
+
+  /* ---------- 搜索：作品名 / 别名 / UUID ---------- */
+  // 比对口径与查重一致（忽略全半角、大小写、空白、标点）；
+  // UUID 也按这个口径比 —— 只写中间一截、带不带 xey/cmd 都能搜到。
+  function matchWork(work, query) {
+    var q = compareKey(query);
+    if (!q) return true;                       // 空查询 = 全部
+    var pool = namesOf(work);
+    for (var i = 0; i < pool.length; i++) {
+      if (compareKey(pool[i]).indexOf(q) >= 0) return true;
+    }
+    if (work.uuid && compareKey(work.uuid).indexOf(q) >= 0) return true;
+    var tags = work.tags || [];
+    for (var j = 0; j < tags.length; j++) {
+      if (compareKey(tags[j]).indexOf(q) >= 0) return true;   // 搜索也认标签
+    }
+    return false;
+  }
+
+  // 返回命中的下标（下标是「在整库里的真实位置」—— 过滤不改变序号）
+  function searchWorks(works, query) {
+    var out = [];
+    for (var i = 0; i < works.length; i++) {
+      if (matchWork(works[i], query)) out.push(i);
+    }
+    return out;
+  }
+
+  /* ---------- 标签（分类） ---------- */
+  // 预置常用分类；用户可以点选，也可以自己输入新的（输过的会自动出现在候选里）
+  var PRESET_TAGS = ['恋爱', '日常', '奇幻', '科幻', '战斗', '搞笑', '悬疑',
+                     '治愈', '校园', '异世界', '运动', '音乐', '机战', '推理', '恐怖', '美食'];
+  var TAG_MAX_LEN = 12;
+
+  function normTag(raw) {
+    var s = normalizeName(raw);
+    return s.replace(/[\/、,，;；|]/g, '').slice(0, TAG_MAX_LEN);
+  }
+
+  // 去重（按比对口径）、去空、截断过长，保持输入顺序。
+  // 元素里若混了分隔符（"奇幻/日常"）也会拆开 —— 标签本身不允许含分隔符。
+  function cleanTags(list) {
+    var seen = {}, out = [], raw = [];
+    var arr = Array.isArray(list) ? list : [list];
+    for (var n = 0; n < arr.length; n++) {
+      var parts = splitTagInput(arr[n]);
+      for (var p = 0; p < parts.length; p++) raw.push(parts[p]);
+    }
+    for (var i = 0; i < raw.length; i++) {
+      var t = normTag(raw[i]);
+      var k = compareKey(t);
+      if (!k || seen[k]) continue;
+      seen[k] = true;
+      out.push(t);
+    }
+    return out;
+  }
+
+  function splitTagInput(text) {
+    return String(text == null ? '' : text).split(/[\/、,，;；|]/);
+  }
+
+  // 用过的标签 + 次数：按次数降序，同次数按拼音/字母（顺序可复现）
+  function allTags(works) {
+    var count = {}, order = [];
+    for (var i = 0; i < works.length; i++) {
+      var tags = works[i].tags || [];
+      for (var j = 0; j < tags.length; j++) {
+        var k = compareKey(tags[j]);
+        if (!k) continue;
+        if (count[k] === undefined) { count[k] = 0; order.push(tags[j]); }
+        count[k]++;
+      }
+    }
+    return order.map(function (t) { return { tag: t, count: count[compareKey(t)] }; })
+      .sort(function (a, b) {
+        if (b.count !== a.count) return b.count - a.count;
+        return compareByRule(a.tag, b.tag);
+      });
+  }
+
+  // 标签筛选：选中的标签「任一命中」，返回整库真实下标
+  function worksWithTags(works, want) {
+    var keys = cleanTags(want).map(compareKey);
+    if (!keys.length) return null;
+    var out = [];
+    for (var i = 0; i < works.length; i++) {
+      var have = (works[i].tags || []).map(compareKey);
+      for (var j = 0; j < keys.length; j++) {
+        if (have.indexOf(keys[j]) >= 0) { out.push(i); break; }
+      }
+    }
+    return out;
+  }
+
+  function setTags(db, index, tags) {
+    var w = db.works[index];
+    if (!w) return { status: 'canceled', reason: 'no-such-work' };
+    w.tags = cleanTags(tags);
+    return { status: 'updated', index: index, tags: w.tags };
+  }
+
+  /* ---------- 导出用的行构造（默认输出里不含 UUID） ---------- */
+  function listRows(works) {
+    return works.map(function (w, i) {
+      return { seq: i + 1, name: w.name, aliases: (w.aliases || []).join(' / '),
+               tags: (w.tags || []).join(' / ') };
+    });
+  }
+
+  function uuidRows(works) {
+    return works.map(function (w, i) {
+      return { seq: i + 1, name: w.name, uuid: w.uuid };
+    });
+  }
+
+  function csvEscape(v) {
+    var s = String(v == null ? '' : v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function toCSV(headers, rows) {
+    var out = [headers.map(csvEscape).join(',')];
+    for (var i = 0; i < rows.length; i++) out.push(rows[i].map(csvEscape).join(','));
+    return out.join('\r\n');
+  }
+
+  root.WorkLibCore = {
+    PREFIX: PREFIX,
+    SUFFIX: SUFFIX,
+    uuidv7: uuidv7,
+    makeWorkUuid: makeWorkUuid,
+    normalizeName: normalizeName,
+    compareKey: compareKey,
+    namesOf: namesOf,
+    findDuplicate: findDuplicate,
+    findDuplicateIndex: findDuplicateIndex,
+    cleanAliases: cleanAliases,
+    splitAliasInput: splitAliasInput,
+    groupOf: groupOf,
+    compareByRule: compareByRule,
+    sortWorksByRule: sortWorksByRule,
+    insertionIndexByRule: insertionIndexByRule,
+    levenshtein: levenshtein,
+    similarity: similarity,
+    findSimilar: findSimilar,
+    SIMILAR_THRESHOLD: SIMILAR_THRESHOLD,
+    SIMILAR_MIN_LEN: SIMILAR_MIN_LEN,
+    matchWork: matchWork,
+    searchWorks: searchWorks,
+    PRESET_TAGS: PRESET_TAGS,
+    normTag: normTag,
+    cleanTags: cleanTags,
+    splitTagInput: splitTagInput,
+    allTags: allTags,
+    worksWithTags: worksWithTags,
+    setTags: setTags,
+    listRows: listRows,
+    uuidRows: uuidRows,
+    toCSV: toCSV,
+    aliasConflictsIn: aliasConflictsIn,
+    insertWork: insertWork,
+    prepareAdd: prepareAdd,
+    resolveSimilar: resolveSimilar,
+    renameWork: renameWork,
+    setAliases: setAliases,
+    setUuid: setUuid,
+    UUID_SHAPE_RE: UUID_SHAPE_RE,
+    deleteWork: deleteWork,
+    discardedUuidSet: discardedUuidSet,
+    mergeImport: mergeImport
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+/* CORE-LOGIC-END */
+</script>
+
+<script>
+/* ---------------- 状态与存储 ---------------- */
+(function () {
+  'use strict';
+  var C = globalThis.WorkLibCore;
+  var LS_KEY = 'worklib.v1';
+  var FILE_KIND = 'worklib-db';
+  var FILE_VERSION = 1;
+
+  var storageOk = true;
+  var db = null;
+
+  function newDb() {
+    return {
+      kind: FILE_KIND,
+      version: FILE_VERSION,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: { insertByRule: true },
+      works: [],          // 数组顺序 = 显示顺序 = 序号顺序
+      discarded: []       // 舍弃的 UUID 不再回流
+    };
+  }
+
+  function touch() {
+    db.updatedAt = new Date().toISOString();
+  }
+
+  function parseDb(parsed) {
+    if (!parsed || !Array.isArray(parsed.works)) throw new Error('bad shape');
+    if (!Array.isArray(parsed.discarded)) parsed.discarded = [];
+    if (!parsed.settings || typeof parsed.settings.insertByRule !== 'boolean') {
+      parsed.settings = { insertByRule: true };
+    }
+    parsed.kind = FILE_KIND;
+    parsed.version = FILE_VERSION;
+    return parsed;
+  }
+
+  function loadLocal() {
+    var raw = null;
+    try {
+      raw = localStorage.getItem(LS_KEY);
+    } catch (e) {
+      storageOk = false;
+      return newDb();
+    }
+    if (!raw) return newDb();
+    try {
+      return parseDb(JSON.parse(raw));
+    } catch (e) {
+      storageOk = false;
+      showBanner('本地存档读不出来（内容可能已损坏），已从空库启动。请勿覆盖，先告诉我，我帮你抢救。');
+      return newDb();
+    }
+  }
+
+  function saveLocal() {
+    if (!storageOk) return false;
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(stripMeta(db)));
+      return true;
+    } catch (e) {
+      storageOk = false;
+      return false;
+    }
+  }
+
+  function save() {
+    if (SERVER_MODE) {
+      // 服务器模式：**不在浏览器里留任何数据副本**，数据只落服务端。
+      // 这样"关掉页面后本机不残留作品"（未授权的人打不开也看不到）。
+      if (!canWrite) { setSaveState('只读模式，没有改动服务器'); return; }
+      schedulePush();
+      return;
+    }
+    if (!storageOk) { setSaveState('本地存储不可用'); return; }
+    if (saveLocal()) {
+      var t = new Date();
+      setSaveState('已自动保存 ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds()));
+    } else {
+      setSaveState('保存失败');
+      showBanner('浏览器拒绝了本地存储写入，数据只在当前页面里。请立刻用「导出备份 JSON」把数据存成文件。');
+    }
+  }
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  /* ---------------- 服务器模式 ---------------- */
+  var SERVER_MODE = false;
+  var serverOnline = false;
+  var canWrite = true;
+  var role = 'owner';
+  var revision = 0;
+  var needLogin = false;
+  var pushTimer = null;
+  var pushAttempts = 0;
+  var issueAction = null;
+  var TOKEN_KEY = 'worklib.token';
+
+  // 双击本地文件 = file://，照旧用 localStorage；从 http(s) 打开 = 服务器模式
+  function detectServerMode() {
+    try {
+      var p = String((typeof location !== 'undefined' && location.protocol) || '');
+      return p === 'http:' || p === 'https:';
+    } catch (e) { return false; }
+  }
+
+  function stripMeta(src) {                // 推给服务端时不带 revision（版本号由服务端管）
+    var out = {};
+    for (var k in src) {
+      if (Object.prototype.hasOwnProperty.call(src, k) && k !== 'revision') out[k] = src[k];
+    }
+    return out;
+  }
+
+  // 服务器模式下，客户端**任何**状态都只放 sessionStorage：
+  //   * 关掉标签页/浏览器就没了（sessionStorage 的作用域就是这一次浏览会话）
+  //   * 不与其它标签页共享，也不会被别的网页读到
+  // 所以「未输入口令前看不到作品」「关掉页面不留数据」「每次访问都要重新输口令」三条同时成立。
+  function ssGet(key) {
+    try { return sessionStorage.getItem(key) || ''; } catch (e) { return ''; }
+  }
+  function ssSet(key, val) {
+    try {
+      if (val) sessionStorage.setItem(key, val);
+      else sessionStorage.removeItem(key);
+    } catch (e) { /* 忽略 */ }
+  }
+
+  // 老版本把口令和整库镜像写进过 localStorage（在服务器域下）—— 一律清掉，
+  // 否则"没输口令也能看到上次下载的作品"。
+  function purgeLegacyLocal() {
+    try {
+      localStorage.removeItem(LS_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+    } catch (e) { /* 忽略 */ }
+  }
+
+  function clearClientCache() {
+    ssSet(TOKEN_KEY, '');
+    purgeLegacyLocal();
+  }
+
+  function getToken() { return ssGet(TOKEN_KEY); }
+  function setToken(v) { ssSet(TOKEN_KEY, v); }
+
+  function pageUrl() {
+    try { return String(location.href); } catch (e) { return '(读不到页面地址)'; }
+  }
+
+  function apiUrlOf(path) {
+    // 一律用绝对路径，免得页面在 /xxx/ 这类路径下把相对地址解析歪
+    var abs = '/' + String(path || '').replace(/^\/+/, '');
+    try { return new URL(abs, location.href).href; } catch (e) { return abs; }
+  }
+
+  function apiFetch(path, opts) {
+    opts = opts || {};
+    var url = '/' + String(path || '').replace(/^\/+/, '');
+    var headers = {};
+    var t = getToken();
+    if (t) headers['X-Worklib-Token'] = t;
+    var init = { method: opts.method || 'GET', headers: headers, cache: 'no-store' };
+    if (opts.body) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+    return fetch(url, init).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) {
+          var err = new Error((data && data.error) || ('HTTP ' + res.status));
+          err.status = res.status;
+          err.data = data;
+          throw err;
+        }
+        return data;
+      });
+    });
+  }
+
+  function updateRoleUi() {
+    var ro = SERVER_MODE && !canWrite;
+    document.body.className = (SERVER_MODE ? 'server' : 'local') + (ro ? ' readonly' : '');
+    var badge = $('roleBadge');
+    if (!SERVER_MODE) {
+      badge.textContent = '本地文件';
+      badge.className = '';
+    } else if (ro) {
+      badge.textContent = '服务器 · 只读';
+      badge.className = 'server readonly';
+    } else {
+      badge.textContent = '服务器 · 可编辑';
+      badge.className = 'server';
+    }
+    $('btnForgetToken').hidden = !SERVER_MODE;
+    $('roNote').hidden = !ro;
+    $('loginCard').hidden = !needLogin;
+  }
+
+  function blockedByReadOnly() {
+    if (SERVER_MODE && !canWrite) {
+      toast('只读模式（朋友访问）：不能修改', 'warn');
+      return true;
+    }
+    return false;
+  }
+
+  function finishBoot() {
+    updateRoleUi();
+    render();
+  }
+
+  function boot() {
+    SERVER_MODE = detectServerMode();
+    if (!SERVER_MODE) {
+      db = loadLocal();
+      finishBoot();
+      if (!storageOk) {
+        showBanner('这个浏览器不允许本页面写本地存储，数据只存在于当前页面。请用「导出备份 JSON」保存，下次用「导入备份 JSON」载入。');
+        setSaveState('本地存储不可用');
+      } else {
+        setSaveState('已就绪');
+      }
+      return;
+    }
+
+    var hadToken = !!getToken();
+    canWrite = false;                      // 还没验明身份之前，一律先当只读（免得界面谎称可编辑）
+    role = 'guest';
+    db = newDb();                          // 没验明身份前，内存里也不放任何作品
+    setSaveState('连接服务器…');
+    apiFetch('api/whoami').then(function (info) {
+      role = (info && info.role) || 'guest';
+      canWrite = !!info.canWrite;
+      return apiFetch('api/db');
+    }).then(function (payload) {
+      revision = (payload && payload.revision) || 0;
+      var remote = payload && payload.db;
+      var local = loadLocal();
+      var keepLocal = false;
+      if (!remote || !Array.isArray(remote.works)) {
+        db = local;
+      } else if (remote.works.length === 0 && canWrite && local.works.length) {
+        // 服务器还是空库，而这个浏览器里有老数据 —— 问一句要不要推上去（不擅自上传）
+        if (window.confirm('服务器上还是空库，而这个浏览器里有 ' + local.works.length + ' 条作品。\n\n' +
+                           '按「确定」= 把这 ' + local.works.length + ' 条上传到服务器\n' +
+                           '按「取消」= 用服务器的空库（本机那份仍留在浏览器里，不会被覆盖）')) {
+          db = local;
+          needLogin = false;
+          serverOnline = true;
+          finishBoot();
+          pushNow();
+          return;
+        }
+        db = parseDb(remote);
+        keepLocal = true;                  // 说好不动本机数据，就别把它清了
+        showBanner('本机原来的 ' + local.works.length + ' 条仍保留在这个浏览器里，没有被服务器数据覆盖。' +
+                   '如果那才是你要的库：把服务端的 server\\data\\作品库.json 删掉（或清空）后重新打开本页，' +
+                   '就会出现「上传本机数据」的提示；也可以在本页用「导出备份 JSON」先存一份。');
+      } else {
+        db = parseDb(remote);
+      }
+      if (!keepLocal) purgeLegacyLocal();  // 清掉老版本留在 localStorage 的副本（口令不动）
+      needLogin = false;
+      serverOnline = true;
+      finishBoot();
+      setSaveState('已连接服务器（' + (canWrite ? '可编辑' : '只读') + '）');
+    }).catch(function (err) {
+      if (err && err.status === 401) {
+        needLogin = true;
+        serverOnline = false;
+        db = newDb();                      // 没口令 → 一条作品都不显示（哪怕本机有旧残留）
+        clearClientCache();
+        finishBoot();
+        $('loginHint').textContent = (hadToken
+          ? '口令不对（可能服务端换过配置）。'
+          : '这个库需要口令。') + 'owner 口令可以编辑，guest 口令只能看；' +
+          '未输入口令前本页不会显示任何作品。';
+        setSaveState('等待口令');
+        return;
+      }
+      serverOnline = false;
+      db = newDb();                        // 连不上也不拿本机旧数据充数，避免泄露
+      purgeLegacyLocal();                  // 只清老版本残留；口令留着，「重新连接」才好用
+      finishBoot();
+      setSaveState('连不上服务器');
+      var detail = ((err && err.name ? err.name + '：' : '') + ((err && err.message) || '未知错误'));
+      var tried = apiUrlOf('api/whoami');
+      showBanner('连不上服务器（' + detail + '）。为免泄露，本页不显示任何本机缓存数据。');
+      showIssue('错误：' + detail + '\n请求地址：' + tried + '\n当前页面：' + pageUrl() + '\n\n' +
+                '按这个顺序查：\n' +
+                '① 那个黑窗口还开着吗（服务必须一直开着）\n' +
+                '② 在浏览器新标签页直接打开 ' + tried + ' —— 能出 JSON 就说明服务没问题，是页面没连上；\n' +
+                '③ 打不开就是网络/防火墙问题：双击「诊断-局域网.bat」，必要时再双击「开放防火墙-7878.bat」\n' +
+                '④ 页面地址和请求地址的主机+端口必须一致（别一个用 localhost 一个用 192.168.x.x）',
+                '重新连接', function () { boot(); });
+    });
+  }
+
+  function schedulePush() {
+    if (pushTimer) clearTimeout(pushTimer);
+    setSaveState('改动待上传…');
+    pushTimer = setTimeout(function () { pushNow(); }, 700);
+  }
+
+  function pushNow() {
+    if (!SERVER_MODE || !canWrite) { setSaveState('只读模式'); return; }
+    if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+    setSaveState('上传中…');
+    apiFetch('api/db', { method: 'PUT', body: { db: stripMeta(db), revision: revision } })
+      .then(function (res) {
+        revision = (res && res.revision) || revision;
+        serverOnline = true;
+        pushAttempts = 0;
+        hideIssue();
+        saveLocal();
+        var t = new Date();
+        setSaveState('已保存到服务器 ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds()));
+      })
+      .catch(function (err) {
+        if (err && err.status === 409) {
+          showIssue('这个库已经被别处修改过（比如你在手机上改过）。为了不覆盖对方的改动，这次改动没有写上去。',
+                    '重新载入服务器版本', reloadFromServer);
+          setSaveState('未保存：服务器上已被别处修改');
+          return;
+        }
+        if (err && err.status === 403) {
+          canWrite = false;
+          updateRoleUi();
+          render();
+          showBanner('服务器说这个口令只能看不能改，已切到只读模式。');
+          setSaveState('只读模式');
+          return;
+        }
+        if (err && err.status === 401) {
+          needLogin = true;
+          updateRoleUi();
+          setSaveState('口令失效，请重新输入');
+          return;
+        }
+        serverOnline = false;
+        pushAttempts++;
+        showIssue('改动没能上传（' + ((err && err.message) || '网络错误') +
+                  '）。改动还在这个页面上，也没有丢。', '重试上传', pushNow);
+        setSaveState(pushAttempts > 1 ? '上传失败 ' + pushAttempts + ' 次' : '上传失败');
+      });
+  }
+
+  function showIssue(msg, label, fn) {
+    $('issueText').textContent = msg;
+    $('btnIssueAction').textContent = label;
+    issueAction = fn;
+    $('issueBox').style.display = 'block';
+  }
+
+  function hideIssue() {
+    issueAction = null;
+    $('issueBox').style.display = 'none';
+  }
+
+  function reloadFromServer() {
+    if (!window.confirm('重新载入服务器上的最新版本？\n\n这个页面上还没上传的改动会被丢弃（服务器上的数据不受影响）。')) return;
+    apiFetch('api/db').then(function (payload) {
+      revision = (payload && payload.revision) || 0;
+      db = parseDb(payload.db);
+      serverOnline = true;
+      hideIssue();
+      saveLocal();
+      updateRoleUi();
+      render();
+      toast('已载入服务器最新版本（rev ' + revision + '，' + db.works.length + ' 条）', 'ok');
+      setSaveState('已连接服务器（' + (canWrite ? '可编辑' : '只读') + '）');
+    }).catch(function (err) {
+      toast('载入失败：' + ((err && err.message) || '网络错误'), 'err');
+    });
+  }
+
+  function doLogin() {
+    var v = String($('inpToken').value || '').trim();
+    if (!v) { toast('请先输入口令', 'err'); return; }
+    setToken(v);
+    $('inpToken').value = '';
+    setSaveState('验证口令…');
+    boot();
+  }
+
+  function forgetToken() {
+    clearClientCache();                    // 清掉口令与本机残留
+    try {
+      if (typeof location !== 'undefined' && location.reload) { location.reload(); return; }
+    } catch (e) { /* 落到下面 */ }
+    needLogin = true;
+    db = newDb();
+    boot();
+  }
+
+  /* ---------------- 小工具 ---------------- */
+  function $(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  var toastTimer = null;
+  function toast(msg, kind) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.className = kind || '';
+    if (toastTimer) clearTimeout(toastTimer);
+    if (msg) toastTimer = setTimeout(function () { el.textContent = ''; el.className = ''; }, 6000);
+  }
+
+  function showBanner(msg) {
+    var el = $('banner');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function setSaveState(s) { $('saveState').textContent = s; }
+
+  function download(filename, text, mime) {
+    var blob = new Blob([text], { type: (mime || 'application/json') + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function stamp() {
+    var d = new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' +
+           pad2(d.getHours()) + pad2(d.getMinutes());
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  var searchQuery = '';
+  var revealed = {};          // uuid -> true，只在当前页面内存里，不落盘（UUID 不进常规输出）
+  var tagFilter = [];         // 正在筛选的标签（多个 = 任一命中）
+
+  // 标签筛选 + 关键词搜索叠加，返回整库真实下标
+  function visibleIndexes() {
+    var bySearch = C.compareKey(searchQuery) ? C.searchWorks(db.works, searchQuery) : null;
+    if (!tagFilter.length) return bySearch || C.searchWorks(db.works, '');
+    var byTag = C.worksWithTags(db.works, tagFilter) || [];
+    if (!bySearch) return byTag;
+    return byTag.filter(function (i) { return bySearch.indexOf(i) >= 0; });
+  }
+
+  function chipHtml(text, cls, attrs) {
+    return '<span class="chip ' + (cls || '') + '"' + (attrs || '') + '>' + esc(text) + '</span>';
+  }
+
+  function renderTagBar() {
+    var bar = $('tagBar');
+    var list = C.allTags(db.works);
+    if (!list.length) { bar.innerHTML = ''; return; }
+    var selected = {};
+    tagFilter.forEach(function (t) { selected[C.compareKey(t)] = true; });
+    var html = ['<span class="meta">标签筛选（多个 = 任一）：</span>'];
+    list.forEach(function (item) {
+      var on = selected[C.compareKey(item.tag)] ? ' on' : '';
+      html.push('<button class="chip' + on + '" data-tag="' + esc(item.tag) + '">' +
+                esc(item.tag) + '<span class="n">' + item.count + '</span></button>');
+    });
+    if (tagFilter.length) {
+      html.push('<button class="chip" id="btnClearTagFilter">清空筛选</button>');
+    }
+    bar.innerHTML = html.join('');
+  }
+
+  function render() {
+    var tb = $('tbody');
+    var hits = visibleIndexes();
+    var html = '';
+    for (var k = 0; k < hits.length; k++) {
+      var i = hits[k];                       // 真实下标：过滤不影响序号，操作也打在对的那条上
+      var w = db.works[i];
+      var g = C.groupOf(w.name);
+      var tag = g === 0 ? '<span class="tag">中文</span>'
+                        : '<span class="tag other">其他语言</span>';
+      var showUuid = !!revealed[w.uuid] && canWrite;   // 只读（朋友）模式完全看不到 UUID
+      var ops = canWrite
+        ? '<button class="mini" data-act="alias" data-i="' + i + '">改别名</button> ' +
+          '<button class="mini" data-act="tags" data-i="' + i + '">标签</button> ' +
+          '<button class="mini" data-act="rename" data-i="' + i + '">改名</button> ' +
+          '<button class="mini" data-act="uuid" data-i="' + i + '">' +
+            (showUuid ? '隐藏UUID' : '显示UUID') + '</button> ' +
+          '<button class="mini danger" data-act="del" data-i="' + i + '">删除</button>'
+        : '<span class="meta">只读</span>';
+      var tagsHtml = (w.tags || []).map(function (t) {
+        return chipHtml(t, 'tag-chip', ' data-tag="' + esc(t) + '"');
+      }).join('');
+      html += '<tr' + (showUuid ? ' class="revealed"' : '') + '>' +
+        '<td class="seq">' + (i + 1) + '</td>' +
+        '<td class="name" title="' + (showUuid ? 'UUID 已展开' : 'UUID 已隐藏') + '">' +
+          esc(w.name) + tag +
+          (showUuid
+            ? '<div class="uuidline"><code>' + esc(w.uuid) + '</code>' +
+              '<button class="mini" data-act="copy" data-i="' + i + '">复制</button>' +
+              '<button class="mini" data-act="edituuid" data-i="' + i + '">改</button></div>'
+            : '') +
+        '</td>' +
+        '<td class="alias">' + esc((w.aliases || []).join(' / ')) + '</td>' +
+        '<td class="tags">' + tagsHtml + '</td>' +
+        '<td class="ops">' + ops + '</td>' +
+      '</tr>';
+    }
+    tb.innerHTML = html;
+    renderTagBar();
+    var filtering = !!C.compareKey(searchQuery) || !!tagFilter.length;
+    var what = [];
+    if (tagFilter.length) what.push('标签：' + tagFilter.join(' / '));
+    if (C.compareKey(searchQuery)) what.push('关键词：' + searchQuery);
+    $('emptyHint').style.display = hits.length ? 'none' : 'block';
+    $('emptyHint').textContent = needLogin
+      ? '请先输入访问口令 —— 未输入口令前本页不显示任何作品。'
+      : (filtering
+         ? '没有匹配「' + what.join('，') + '」的作品。'
+         : '还没有作品，先在上面添加一条。');
+    $('searchInfo').textContent = filtering
+      ? '找到 ' + hits.length + ' / ' + db.works.length + ' 条'
+      : '';
+    $('stat').textContent = '共 ' + db.works.length + ' 部作品';
+    $('listHead').textContent = '列表（规则：中文按拼音首字母正序 → 其他语言按原名字母序；序号 = 当前位置）';
+    $('chkInsertByRule').checked = !!db.settings.insertByRule;
+  }
+
+  /* ---- 标签筛选 ---- */
+  function toggleTagFilter(tag) {
+    var k = C.compareKey(tag);
+    var idx = -1;
+    for (var i = 0; i < tagFilter.length; i++) {
+      if (C.compareKey(tagFilter[i]) === k) { idx = i; break; }
+    }
+    if (idx >= 0) tagFilter.splice(idx, 1); else tagFilter.push(tag);
+    render();
+  }
+
+  function clearTagFilter() {
+    tagFilter = [];
+    render();
+  }
+
+  /* ---- 标签编辑对话框 ---- */
+  var tagDraft = [];
+  var tagTarget = -1;
+
+  function tagCandidates() {
+    var out = [], seen = {};
+    function push(t) {
+      var k = C.compareKey(t);
+      if (!k || seen[k]) return;
+      seen[k] = true;
+      out.push(t);
+    }
+    C.PRESET_TAGS.forEach(push);
+    C.allTags(db.works).forEach(function (x) { push(x.tag); });
+    tagDraft.forEach(push);
+    return out;
+  }
+
+  function renderTagDialog() {
+    var picked = {};
+    tagDraft.forEach(function (t) { picked[C.compareKey(t)] = true; });
+    $('dlgTagCands').innerHTML = tagCandidates().map(function (t) {
+      var on = picked[C.compareKey(t)] ? ' on' : '';
+      return '<button class="chip' + on + '" data-pick="' + esc(t) + '">' + esc(t) + '</button>';
+    }).join('');
+    $('dlgTagPicked').innerHTML = tagDraft.length
+      ? tagDraft.map(function (t) { return chipHtml(t, '', ''); }).join('')
+      : '<span class="meta">（还没选）</span>';
+  }
+
+  function toggleDraftTag(t) {
+    var k = C.compareKey(t);
+    var idx = -1;
+    for (var i = 0; i < tagDraft.length; i++) {
+      if (C.compareKey(tagDraft[i]) === k) { idx = i; break; }
+    }
+    if (idx >= 0) tagDraft.splice(idx, 1); else tagDraft.push(t);
+    renderTagDialog();
+  }
+
+  function addDraftTags(text) {
+    tagDraft = C.cleanTags(tagDraft.concat(C.splitTagInput(text)));
+    renderTagDialog();
+  }
+
+  function applyTags(tags) {
+    var res = C.setTags(db, tagTarget, tags);
+    if (res.status === 'updated') {
+      touch(); save(); render();
+      toast('已更新标签（序号 ' + (tagTarget + 1) + '，' + res.tags.length + ' 个）', 'ok');
+    }
+  }
+
+  function editTags(i) {
+    if (blockedByReadOnly()) return;
+    var w = db.works[i];
+    if (!w) return;
+    tagTarget = i;
+    tagDraft = (w.tags || []).slice();
+    $('dlgTagsName').textContent = w.name;
+    $('inpNewTag').value = '';
+    var dlg = $('dlgTags');
+    if (typeof dlg.showModal !== 'function') {          // 老浏览器退化成输入框
+      var next = window.prompt('给《' + w.name + '》设标签（多个用 / 分隔）：', tagDraft.join(' / '));
+      if (next !== null) applyTags(C.splitTagInput(next));
+      tagTarget = -1;
+      return;
+    }
+    renderTagDialog();
+    dlg.showModal();
+  }
+
+  function closeTagsDialog(save) {
+    var dlg = $('dlgTags');
+    if (save) applyTags(tagDraft);
+    tagDraft = [];
+    tagTarget = -1;
+    if (dlg.open) dlg.close();
+  }
+
+  /* ---------------- 操作（薄封装：真正的判断都在核心段里） ---------------- */
+  function describeConflicts(conflicts) {
+    return conflicts.map(function (c) {
+      return '「' + c.alias + '」已经是序号 ' + (c.hit.index + 1) + '（' + c.hit.work.name + '）的' +
+             (c.hit.via === 'alias' ? '别名' : '正式名');
+    }).join('\n');
+  }
+
+  function askAliasConflict(conflicts, tail) {
+    return window.confirm('这些别名其实属于别的作品：\n\n' + describeConflicts(conflicts) + '\n\n' + tail);
+  }
+
+  function handleAddResult(res, onAdded) {
+    if (res.status === 'added') {
+      touch(); save(); render();
+      var hidden = C.compareKey(searchQuery) && !C.matchWork(db.works[res.index], searchQuery);
+      var hiddenByTag = tagFilter.length &&
+        !((C.worksWithTags([db.works[res.index]], tagFilter) || []).length);
+      toast('已添加（序号 ' + (res.index + 1) + '）' +
+        (res.aliases.length ? '　别名 ' + res.aliases.length + ' 个' : '') +
+        ((res.tags || []).length ? '　标签 ' + res.tags.join('/') : '') +
+        (hidden || hiddenByTag ? '　—— 它不在当前筛选结果里，点「清空」就能看到' : ''), 'ok');
+      if (typeof onAdded === 'function') onAdded();
+      return;
+    }
+    if (res.status === 'duplicate') {
+      if (res.aliasAdded) {
+        touch(); save(); render();
+        toast('已把「' + res.name + '」登记为序号 ' + (res.index + 1) + '（' + res.text + '）的别名', 'ok');
+        return;
+      }
+      toast('重复（序号 ' + (res.index + 1) + '）' +
+        (res.via === 'alias' ? '　—— 与它的别名「' + res.text + '」相同' : '　—— 已有：' + res.text), 'warn');
+      return;
+    }
+    if (res.status === 'need-similar') {
+      askSimilar(res.name, res.candidates, function (action, pick) {
+        handleAddResult(C.resolveSimilar(db, res, action, pick), onAdded);
+      });
+      return;
+    }
+    if (res.status === 'empty') { toast('请先输入作品名', 'err'); return; }
+    toast('已取消，没有添加', '');
+  }
+
+  function addWork(rawName, rawAlias, rawTags, onAdded) {
+    if (blockedByReadOnly()) return;
+    handleAddResult(C.prepareAdd(db, rawName, rawAlias, {
+      tags: rawTags,
+      onAliasConflict: function (conflicts) {
+        return askAliasConflict(conflicts, '按「确定」= 只保留不冲突的别名，继续添加\n按「取消」= 我回去改');
+      }
+    }), onAdded);
+  }
+
+  /* ---- 相似候选对话框：用户不选就不落库 ---- */
+  var similarDone = null;
+
+  function askSimilar(inputName, cands, done) {
+    var dlg = $('dlgSimilar');
+    $('dlgInput').textContent = inputName;
+
+    if (typeof dlg.showModal !== 'function') {
+      // 老浏览器：退化成一次确认，不擅自替用户决定
+      if (window.confirm('这个名字和已有的作品很像：\n\n' + describeCandidates(cands) +
+                         '\n\n按「确定」= 是新作品，直接添加\n按「取消」= 不添加')) {
+        done('new', 0);
+      } else {
+        done('cancel', -1);
+      }
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i];
+      var w = db.works[c.index];
+      html += '<label>' +
+        '<input type="radio" name="cand" value="' + i + '"' + (i === 0 ? ' checked' : '') + '>' +
+        '<span class="cand-name">序号 ' + (c.index + 1) + '　' + esc(w.name) + '</span>' +
+        '<span class="cand-meta">相似度 ' + Math.round(c.score * 100) + '%' +
+        (c.via === 'alias' ? '（命中别名「' + esc(c.text) + '」）' : '') + '</span>' +
+      '</label>';
+    }
+    $('dlgCands').innerHTML = html;
+    similarDone = done;
+    dlg.showModal();
+  }
+
+  function describeCandidates(cands) {
+    return cands.map(function (c) {
+      return '序号 ' + (c.index + 1) + '　' + db.works[c.index].name +
+             '（相似度 ' + Math.round(c.score * 100) + '%）';
+    }).join('\n');
+  }
+
+  function closeSimilar(action) {
+    var dlg = $('dlgSimilar');
+    var idx = 0;
+    var picked = dlg.querySelector('input[name="cand"]:checked');
+    if (picked) idx = parseInt(picked.value, 10) || 0;
+    var done = similarDone;
+    similarDone = null;
+    if (dlg.open) dlg.close();
+    if (done) done(action, idx);
+  }
+
+  // 改名：只改名字，UUID 与位置都不动（禁忌：不自动移动排序位置）
+  function renameWork(i) {
+    if (blockedByReadOnly()) return;
+    var w = db.works[i];
+    if (!w) return;
+    var next = window.prompt('修改作品名（UUID 不变，位置也不自动移动）：', w.name);
+    if (next === null) return;
+    var res = C.renameWork(db, i, next);
+    if (res.status === 'renamed') {
+      touch(); save(); render();
+      toast('已改名（序号 ' + (i + 1) + '，位置未动；要归位请点「按规则重排」）', 'ok');
+    } else if (res.status === 'empty') {
+      toast('名字不能为空', 'err');
+    } else if (res.status === 'unchanged') {
+      toast('名字没变', '');
+    } else if (res.status === 'duplicate') {
+      toast('重复（序号 ' + (res.index + 1) + '），本次没有改动', 'warn');
+    }
+  }
+
+  // 按规则重排：只在用户明确点击时执行
+  function resortAll() {
+    if (blockedByReadOnly()) return;
+    if (db.works.length < 2) { toast('作品太少，不用重排', ''); return; }
+    var before = db.works.map(function (w) { return w.uuid; }).join('|');
+    var sorted = C.sortWorksByRule(db.works);
+    var after = sorted.map(function (w) { return w.uuid; }).join('|');
+    if (before === after) { toast('当前顺序已经符合规则，没有改动', 'ok'); return; }
+    if (!window.confirm('按规则重排全表顺序？\n\n中文按拼音首字母正序 → 其他语言按原名字母序。\n' +
+                        '序号会变化，UUID 与作品的绑定不变。')) {
+      toast('已取消，顺序没有改动', '');
+      return;
+    }
+    db.works = sorted;
+    touch(); save(); render();
+    toast('已按规则重排（共 ' + db.works.length + ' 部）', 'ok');
+  }
+
+  function editAlias(i) {
+    if (blockedByReadOnly()) return;
+    var w = db.works[i];
+    if (!w) return;
+    var cur = (w.aliases || []).join(' / ');
+    var next = window.prompt('《' + w.name + '》的别名 / 其他译名，多个用 / 分隔：', cur);
+    if (next === null) return;
+    var res = C.setAliases(db, i, next, {
+      onAliasConflict: function (conflicts) {
+        return askAliasConflict(conflicts, '按「确定」= 丢弃冲突的别名，其余保留\n按「取消」= 放弃本次修改');
+      }
+    });
+    if (res.status === 'updated') {
+      touch(); save(); render();
+      toast('已更新别名（序号 ' + (i + 1) + '，' + res.aliases.length + ' 个）', 'ok');
+    } else {
+      toast('已取消，别名未改动', '');
+    }
+  }
+
+  // 显示 / 隐藏单条作品的 UUID（不落盘，刷新即回到隐藏状态）
+  function toggleUuid(i) {
+    if (blockedByReadOnly()) return;
+    var w = db.works[i];
+    if (!w) return;
+    if (revealed[w.uuid]) {
+      delete revealed[w.uuid];
+      render();
+      toast('已隐藏该作品的 UUID', '');
+      return;
+    }
+    revealed[w.uuid] = true;
+    render();
+    toast('已显示《' + w.name + '》的 UUID', 'ok');
+  }
+
+  function copyUuid(i) {
+    if (blockedByReadOnly()) return;
+    var w = db.works[i];
+    if (!w) return;
+    var text = w.uuid;
+    function manual() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      if (ta.select) ta.select();
+      var ok = false;
+      try { ok = document.execCommand && document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      if (ok) { toast('已复制 UUID', 'ok'); return; }
+      window.prompt('复制下面的 UUID（Ctrl+C）：', text);
+    }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { toast('已复制 UUID', 'ok'); }, manual);
+        return;
+      }
+    } catch (e) { /* 走兜底 */ }
+    manual();
+  }
+
+  // 手动改 UUID：只给当前这一条看，改完照样不显示在常规列表里
+  function editUuid(i) {
+    if (blockedByReadOnly()) return;
+    var w = db.works[i];
+    if (!w) return;
+    var next = window.prompt('《' + w.name + '》的 UUID\n（可以只写中间那截，前后缀自动补齐）：', w.uuid);
+    if (next === null) return;
+    var res = C.setUuid(db, i, next);
+    if (res.status === 'updated') {
+      touch(); save();
+      revealed[res.uuid] = true;        // 改完继续把这条的 UUID 摊开给你核对
+      render();
+      toast('已改 UUID（序号 ' + (i + 1) + '）' + (res.warning === 'not-v7' ? '　注意：这不是 UUID v7' : ''), 'ok');
+    } else if (res.status === 'unchanged') {
+      toast('UUID 没变', '');
+    } else if (res.status === 'empty') {
+      toast('UUID 不能为空；想清空请用删除', 'err');
+    } else if (res.status === 'bad-format') {
+      toast('格式不对：需要 8-4-4-4-12 的十六进制，可带 xey 前缀和 cmd 后缀', 'err');
+    } else if (res.status === 'duplicate') {
+      toast('这个 UUID 已经是序号 ' + (res.index + 1) + '（' + res.name + '）的，没有改动', 'warn');
+    } else if (res.status === 'discarded') {
+      toast('这个 UUID 已在舍弃名单里，不回流', 'warn');
+    }
+  }
+
+  function delWork(i) {
+    if (blockedByReadOnly()) return;
+    var w = db.works[i];
+    if (!w) return;
+    if (!window.confirm('删除《' + w.name + '》？\n它的 UUID 会被记入「已舍弃」，不再回流。')) return;
+    C.deleteWork(db, i);
+    touch(); save(); render();
+    toast('已删除（序号 ' + (i + 1) + '），UUID 已记入舍弃名单', 'ok');
+  }
+
+  /* ---------------- 导出 / 导入 ---------------- */
+  var PREVIEW_LIMIT = 300;
+
+  function showPreview(title, headers, rows, note) {
+    $('previewWrap').hidden = false;
+    $('previewTitle').textContent = title + '（' + rows.length + ' 行）' + (note ? '　' + note : '');
+    var html = '<table><thead><tr>';
+    headers.forEach(function (h) { html += '<th>' + esc(h) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    var shown = Math.min(rows.length, PREVIEW_LIMIT);
+    for (var i = 0; i < shown; i++) {
+      html += '<tr>';
+      rows[i].forEach(function (cell) { html += '<td>' + esc(cell) + '</td>'; });
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    if (rows.length > shown) {
+      html += '<div class="hint">只显示前 ' + shown + ' 行，完整内容请导出 CSV。</div>';
+    }
+    $('previewBody').innerHTML = html;
+  }
+
+  function previewList() {
+    var rows = C.listRows(db.works);
+    showPreview('完整作品列表', ['序号', '作品名', '别名', '标签'],
+      rows.map(function (r) { return [r.seq, r.name, r.aliases, r.tags]; }),
+      '（不含 UUID）');
+  }
+
+  function exportList() {
+    if (!db.works.length) { toast('还没有作品，没东西可导出', 'warn'); return; }
+    var rows = C.listRows(db.works);
+    var csv = C.toCSV(['序号', '作品名', '别名', '标签'],
+      rows.map(function (r) { return [r.seq, r.name, r.aliases, r.tags]; }));
+    download('作品列表-' + stamp() + '.csv', '\uFEFF' + csv, 'text/csv');
+    previewList();
+    toast('已导出作品列表（' + rows.length + ' 行，不含 UUID）', 'ok');
+  }
+
+  function exportUuidTable() {
+    if (blockedByReadOnly()) return;
+    if (!db.works.length) { toast('还没有作品，没东西可导出', 'warn'); return; }
+    var rows = C.uuidRows(db.works);
+    var csv = C.toCSV(['序号', '作品名', 'UUID'],
+      rows.map(function (r) { return [r.seq, r.name, r.uuid]; }));
+    download('作品-UUID对应表-' + stamp() + '.csv', '\uFEFF' + csv, 'text/csv');
+    showPreview('作品-UUID 对应表', ['序号', '作品名', 'UUID'],
+      rows.map(function (r) { return [r.seq, r.name, r.uuid]; }));
+    toast('已导出作品-UUID 对应表（' + rows.length + ' 行）', 'ok');
+  }
+
+  function exportJson() {
+    if (blockedByReadOnly()) return;
+    touch(); save();
+    download('作品库-备份-' + stamp() + '.json', JSON.stringify(stripMeta(db), null, 2), 'application/json');
+    toast('已导出备份文件（含 UUID，请妥善保存）', 'ok');
+  }
+
+  function importJson(file) {
+    if (blockedByReadOnly()) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed;
+      try {
+        // 去掉 BOM：用记事本另存为「UTF-8 带 BOM」时开头会多一个 \uFEFF，JSON.parse 会直接报错
+        parsed = JSON.parse(String(reader.result).replace(/^\uFEFF/, ''));
+      } catch (e) {
+        toast('导入失败：不是合法的 JSON 文件', 'err');
+        return;
+      }
+      if (!parsed || !Array.isArray(parsed.works)) {
+        toast('导入失败：这个文件里没有 works 列表', 'err');
+        return;
+      }
+      var mode = window.confirm(
+        '读取到 ' + parsed.works.length + ' 条记录。\n\n' +
+        '「确定」= 合并进当前库：新作品加进来；**UUID 相同的记录会用文件里的名字/别名/标签更新它**' +
+        '（作品的 UUID 不会被改）\n' +
+        '「取消」= 放弃导入'
+      );
+      if (!mode) { toast('已取消导入', ''); return; }
+
+      var res = C.mergeImport(db, parsed);
+      touch(); save(); render();
+      var extra = [];
+      if (res.updated) extra.push('更新了 ' + res.updated + ' 条的名字/别名/标签');
+      if (res.skippedDup) extra.push('内容相同跳过 ' + res.skippedDup + ' 条');
+      if (res.skippedDiscarded) extra.push('UUID 已舍弃、不回流 ' + res.skippedDiscarded + ' 条');
+      if (res.bad) extra.push('格式不完整忽略 ' + res.bad + ' 条');
+      toast('导入完成：新增 ' + res.added + ' 条' +
+            (extra.length ? '，' + extra.join('，') : '') +
+            '（现共 ' + db.works.length + ' 条）', 'ok');
+      if (res.skippedDiscarded) {
+        showBanner('这次导入里有 ' + res.skippedDiscarded + ' 条记录的 UUID 已在「已舍弃」名单里，按规则没有回流。' +
+                   '如果那是误删，告诉我，我帮你逐条确认后再处理。');
+      }
+    };
+    reader.onerror = function () { toast('导入失败：读文件出错', 'err'); };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  /* ---------------- 绑定事件 ---------------- */
+  function bind() {
+    $('btnAdd').addEventListener('click', function () {
+      addWork($('inpName').value, $('inpAlias').value, $('inpTags').value, function () {
+        $('inpName').value = ''; $('inpAlias').value = ''; $('inpTags').value = '';
+        $('inpName').focus();
+      });
+    });
+    $('inpName').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('btnAdd').click(); }
+    });
+    $('inpAlias').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('btnAdd').click(); }
+    });
+    $('inpTags').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('btnAdd').click(); }
+    });
+
+    $('tbody').addEventListener('click', function (e) {
+      // 按钮优先（标签 chip 不是按钮，不会抢）
+      var btn = e.target.closest('button[data-act]');
+      if (btn) {
+        var i = parseInt(btn.getAttribute('data-i'), 10);
+        var act = btn.getAttribute('data-act');
+        if (act === 'alias') editAlias(i);
+        else if (act === 'tags') editTags(i);
+        else if (act === 'rename') renameWork(i);
+        else if (act === 'uuid') toggleUuid(i);
+        else if (act === 'edituuid') editUuid(i);
+        else if (act === 'copy') copyUuid(i);
+        else if (act === 'del') delWork(i);
+        return;
+      }
+      var chip = e.target.closest('.chip[data-tag]');
+      if (chip) toggleTagFilter(chip.getAttribute('data-tag'));
+    });
+
+    $('tagBar').addEventListener('click', function (e) {
+      if (e.target.closest('#btnClearTagFilter')) { clearTagFilter(); return; }
+      var chip = e.target.closest('.chip[data-tag]');
+      if (chip) toggleTagFilter(chip.getAttribute('data-tag'));
+    });
+
+    // 标签对话框
+    $('dlgTagCands').addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip[data-pick]');
+      if (chip) toggleDraftTag(chip.getAttribute('data-pick'));
+    });
+    $('btnAddTag').addEventListener('click', function () {
+      addDraftTags($('inpNewTag').value);
+      $('inpNewTag').value = '';
+    });
+    $('inpNewTag').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('btnAddTag').click(); }
+    });
+    $('dlgTagSave').addEventListener('click', function () { closeTagsDialog(true); });
+    $('dlgTagCancel').addEventListener('click', function () { closeTagsDialog(false); });
+    $('dlgTags').addEventListener('cancel', function (e) {
+      e.preventDefault();
+      closeTagsDialog(false);
+    });
+
+    $('inpSearch').addEventListener('input', function (e) {
+      searchQuery = e.target.value;
+      render();
+    });
+    $('inpSearch').addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        e.target.value = '';
+        searchQuery = '';
+        render();
+      }
+    });
+    $('btnClearSearch').addEventListener('click', function () {
+      $('inpSearch').value = '';
+      searchQuery = '';
+      render();
+      $('inpSearch').focus();
+    });
+
+    $('btnResort').addEventListener('click', resortAll);
+    $('chkInsertByRule').addEventListener('change', function (e) {
+      if (blockedByReadOnly()) { e.target.checked = !!db.settings.insertByRule; return; }
+      db.settings.insertByRule = !!e.target.checked;
+      touch(); save();
+      toast(db.settings.insertByRule ? '新作品将按规则插到位' : '新作品将追加到末尾（需要时手动重排）', '');
+    });
+
+    // 服务器模式：登录 / 换口令 / 冲突处理
+    $('btnLogin').addEventListener('click', doLogin);
+    $('inpToken').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+    });
+    $('btnForgetToken').addEventListener('click', forgetToken);
+    $('btnIssueAction').addEventListener('click', function () {
+      if (typeof issueAction === 'function') issueAction();
+    });
+
+    $('dlgSame').addEventListener('click', function () { closeSimilar('same'); });
+    $('dlgAlias').addEventListener('click', function () { closeSimilar('alias'); });
+    $('dlgNew').addEventListener('click', function () { closeSimilar('new'); });
+    $('dlgCancel').addEventListener('click', function () { closeSimilar('cancel'); });
+    $('dlgSimilar').addEventListener('cancel', function (e) {
+      e.preventDefault();               // 交给 closeSimilar 统一收尾
+      closeSimilar('cancel');
+    });
+
+    $('btnExportJson').addEventListener('click', exportJson);
+    $('btnExportList').addEventListener('click', exportList);
+    $('btnExportUuid').addEventListener('click', exportUuidTable);
+    $('btnPreviewList').addEventListener('click', function () {
+      if (!$('previewWrap').hidden) { $('previewWrap').hidden = true; return; }
+      previewList();
+    });
+    $('btnClosePreview').addEventListener('click', function () { $('previewWrap').hidden = true; });
+    $('btnImportJson').addEventListener('click', function () { $('fileImport').click(); });
+    $('fileImport').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (f) importJson(f);
+      e.target.value = '';
+    });
+  }
+
+  /* ---------------- 启动 ---------------- */
+  db = newDb();
+  bind();
+  // 关掉/离开页面时把客户端状态清干净（若只是进了 bfcache、按返回键还能回来，就不清）
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('pagehide', function (e) {
+      if (e && e.persisted) return;
+      if (SERVER_MODE) clearClientCache();
+    });
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

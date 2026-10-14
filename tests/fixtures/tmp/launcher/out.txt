@@ -1,0 +1,27 @@
+==============================================================
+  作品库 · 正在启动服务
+==============================================================
+  隧道   : 已检测到 cloudflared
+           需要外网时，改双击「启动-作品库（含外网）.bat」；
+           或手动：cloudflared tunnel run worklib
+  cpolar  : 已检测到（国内穿透，手机用它比 Cloudflare 快）
+           需要时改双击「启动-作品库（含cpolar）.bat」；
+           或手动：cpolar http 9596
+  防火墙 : 首次运行 Windows 可能弹窗，请只勾「专用网络」
+  提示   : 关掉这个窗口 = 停止服务
+--------------------------------------------------------------
+已生成配置文件：D:\dsh的项目\GitHub发布\tests\fixtures\tmp\launcher\config.json
+==============================================================
+作品库服务已启动
+  本机    : http://127.0.0.1:9596
+  局域网  : http://192.168.3.18:9596
+  数据文件: D:\dsh的项目\GitHub发布\tests\fixtures\tmp\launcher\作品库.json
+  页面文件: D:\dsh的项目\GitHub发布\作品库.html
+  只读口令：启动参数或 config.json 里的 guest_token
+  已生成/更新口令并写回 config.json：
+    owner = 4MiRxq-cfwZuzIwulgA-rsYiG2Gqs5hLA4qhSdM8WeE
+    guest = NqpmuuEc5RF8YGALde_yVyL-OPozw0Ycc0UXpe2-ZcY
+按 Ctrl+C 停止（关掉这个窗口也可以）
+==============================================================
+[23:04:18] 200  /                            127.0.0.1   79542 B
+[23:04:31] 200  /                            127.0.0.1   79542 B
